@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>가상 아카이브 탈출</title>
+    
+    <style>
+        body {
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #1a1a1a;
+            font-family: 'Malgun Gothic', sans-serif;
+        }
+
+        #game-container {
+            position: relative;
+            width: 900px;
+            max-width: 100%;
+            border: 2px solid #555;
+        }
+
+        .background-image {
+            width: 100%;
+            display: block;
+        }
+
+        .clickable-object {
+            position: absolute;
+            cursor: pointer;
+            border-radius: 10px;
+            transition: background-color 0.3s ease-in-out, transform 0.2s ease;
+        }
+
+        .clickable-object:hover {
+            background-color: rgba(255, 255, 0, 0.4);
+            transform: scale(1.02);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+        }
+
+        #password-section {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 10px;
+            z-index: 5;
+        }
+
+        input[type="text"] {
+            padding: 10px;
+            font-size: 1em;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            width: 150px;
+            text-align: center;
+        }
+
+        button {
+            padding: 10px 15px;
+            font-size: 1em;
+            border: none;
+            background-color: #4CAF50;
+            color: white;
+            cursor: pointer;
+            border-radius: 5px;
+            transition: background-color 0.2s;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+
+        /* 이 클래스가 요소를 숨기는 역할을 합니다. */
+        .hidden {
+            display: none !important;
+        }
+        
+        #record-display {
+            position: absolute;
+            top: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: rgba(0, 0, 0, 0.7);
+            color: #ffd700;
+            padding: 10px 20px;
+            border-radius: 5px;
+            font-size: 0.9em;
+            border: 1px solid #ffd700;
+            text-align: center;
+            z-index: 5;
+        }
+
+        /* --- 모달 스타일 --- */
+        #modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            z-index: 100;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        #modal-box {
+            background-color: #fff;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.4);
+            width: 90%;
+            max-width: 450px;
+            text-align: center;
+        }
+
+        #modal-title {
+            font-size: 1.5em;
+            font-weight: bold;
+            margin-top: 0;
+            margin-bottom: 15px;
+            color: #333;
+        }
+
+        #modal-text {
+            font-size: 1.1em;
+            line-height: 1.6;
+            white-space: pre-wrap;
+            margin-bottom: 25px;
+            color: #555;
+        }
+        
+        #modal-input {
+            width: 80%;
+            padding: 10px;
+            margin-bottom: 20px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            font-size: 1em;
+        }
+
+        #modal-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+        }
+
+        #modal-buttons button {
+            padding: 12px 25px;
+        }
+    </style>
+</head>
+<body>
+    <div id="game-container">
+        <img src="https://i.postimg.cc/WpJ6C870/Whisk-144ad709e7.jpg" alt="역사 아카이브" class="background-image">
+
+        <div class="clickable-object" id="hindenburg" style="top: 55%; left: 5%; width: 25%; height: 30%;"></div>
+        <div class="clickable-object" id="titanic" style="top: 28%; left: 30%; width: 35%; height: 35%;"></div>
+        <div class="clickable-object" id="chernobyl" style="top: 50%; left: 70%; width: 20%; height: 30%;"></div>
+        <div class="clickable-object" id="september11" style="top: 10%; left: 10%; width: 18%; height: 20%;"></div>
+        
+        <div id="record-display" class="hidden"></div>
+
+        <div id="password-section">
+            <input type="text" id="password-input" placeholder="4자리 비상코드" maxlength="4">
+            <button id="submit-password">탈출</button>
+        </div>
+    </div>
+
+    <!-- 
+      ▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼
+      문제 해결의 핵심입니다!
+      아래 div 태그에 class="hidden"이 반드시 포함되어야 합니다.
+      이 클래스가 없으면 페이지가 로드될 때 모달이 바로 보이게 됩니다.
+      ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲
+    -->
+    <div id="modal-overlay" class="hidden">
+        <div id="modal-box">
+            <h2 id="modal-title"></h2>
+            <p id="modal-text"></p>
+            <input type="text" id="modal-input" class="hidden" placeholder="이름을 입력하세요">
+            <div id="modal-buttons"></div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const startTime = new Date();
+            
+            const objects = document.querySelectorAll('.clickable-object');
+            const passwordInput = document.getElementById('password-input');
+            const submitBtn = document.getElementById('submit-password');
+            const recordDisplay = document.getElementById('record-display');
+
+            const modalOverlay = document.getElementById('modal-overlay');
+            const modalTitle = document.getElementById('modal-title');
+            const modalText = document.getElementById('modal-text');
+            const modalInput = document.getElementById('modal-input');
+            const modalButtons = document.getElementById('modal-buttons');
+
+            const bestRecordKey = 'escapeBestRecord';
+            const correctPassword = '6442';
+
+            const hints = {
+                'hindenburg': { title: '힌덴부르크 참사 기록', text: '"오, 인간성!"이라는 유명한 라디오 방송이 기록된 날짜는 1937년 5월 6일이다.\n첫 번째 코드는 [날짜] 이다.'},
+                'titanic': { title: '타이타닉호 설계도', text: '이 거대한 배의 상징과도 같았던 것은 바로 굴뚝이었다.\n두 번째 코드는 [굴뚝의 개수] 이다.'},
+                'chernobyl': { title: '체르노빌 사고 분석 파일', text: '끔찍한 재앙은 제어 불능 상태가 된 원자로에서 시작되었다.\n세 번째 코드는 사고가 발생한 [원자로의 번호] 이다.'},
+                'september11': { title: '9/11 테러 기록', text: '테러로 인해 뉴욕의 상징이었던 세계 무역 센터 쌍둥이 빌딩이 무너졌다.\n네 번째 코드는 이날 붕괴된 [타워의 개수] 이다.'}
+            };
+
+            const hideModal = () => {
+                modalOverlay.classList.add('hidden');
+            };
+
+            const showModal = (config) => {
+                modalTitle.textContent = config.title;
+                modalText.textContent = config.text;
+
+                modalInput.classList.add('hidden');
+                if (config.showInput) {
+                    modalInput.classList.remove('hidden');
+                    modalInput.value = '';
+                    modalInput.placeholder = "이름을 입력하세요";
+                }
+
+                modalButtons.innerHTML = ''; 
+                config.buttons.forEach(btnConfig => {
+                    const button = document.createElement('button');
+                    button.textContent = btnConfig.label;
+                    button.addEventListener('click', btnConfig.callback);
+                    modalButtons.appendChild(button);
+                });
+
+                modalOverlay.classList.remove('hidden');
+            };
+
+            const displayBestRecord = () => {
+                const savedRecord = localStorage.getItem(bestRecordKey);
+                if (savedRecord) {
+                    const record = JSON.parse(savedRecord);
+                    recordDisplay.textContent = `🏆 최고 기록: ${record.name} (${record.time}초)`;
+                } else {
+                    recordDisplay.textContent = '🏆 아직 최고 기록이 없습니다. 도전하세요!';
+                }
+                recordDisplay.classList.remove('hidden');
+            };
+
+            objects.forEach(obj => {
+                obj.addEventListener('click', () => {
+                    const hint = hints[obj.id];
+                    showModal({
+                        title: hint.title,
+                        text: hint.text,
+                        showInput: false,
+                        buttons: [{ label: '닫기', callback: hideModal }]
+                    });
+                });
+            });
+
+            const handleEscapeAttempt = () => {
+                if (passwordInput.value !== correctPassword) {
+                    passwordInput.value = '';
+                    passwordInput.focus();
+                    showModal({
+                        title: '접근 거부',
+                        text: '비상 코드가 일치하지 않습니다.\n힌트를 다시 확인해주세요.',
+                        showInput: false,
+                        buttons: [{ label: '확인', callback: hideModal }]
+                    });
+                    return;
+                }
+                
+                const endTime = new Date();
+                const timeTaken = Math.round((endTime - startTime) / 1000);
+                const savedRecordRaw = localStorage.getItem(bestRecordKey);
+                const bestTime = savedRecordRaw ? JSON.parse(savedRecordRaw).time : Infinity;
+
+                if (timeTaken < bestTime) {
+                    showModal({
+                        title: '🎉 최고 기록 달성!',
+                        text: `새로운 기록입니다! 소요 시간: ${timeTaken}초\n기록을 위해 이름을 남겨주세요.`,
+                        showInput: true,
+                        buttons: [
+                            {
+                                label: '기록 저장',
+                                callback: () => {
+                                    const userName = modalInput.value.trim();
+                                    if (!userName) {
+                                        modalInput.placeholder = "이름을 꼭 입력해주세요!";
+                                        modalInput.focus();
+                                        return;
+                                    }
+                                    const newRecord = { name: userName, time: timeTaken };
+                                    localStorage.setItem(bestRecordKey, JSON.stringify(newRecord));
+                                    showModal({
+                                        title: '기록 저장 완료',
+                                        text: `${userName}님의 소중한 기록이 저장되었습니다.\n가상 아카이브를 탈출합니다.`,
+                                        showInput: false,
+                                        buttons: [{ label: '확인', callback: () => window.location.reload() }]
+                                    });
+                                }
+                            },
+                            {
+                                label: '취소',
+                                callback: () => {
+                                    showModal({
+                                        title: '탈출 성공',
+                                        text: `기록을 저장하지 않고 탈출합니다. (소요 시간: ${timeTaken}초)`,
+                                        showInput: false,
+                                        buttons: [{ label: '확인', callback: () => window.location.reload() }]
+                                    });
+                                }
+                            }
+                        ]
+                    });
+                    setTimeout(() => modalInput.focus(), 100);
+                } else {
+                    showModal({
+                        title: '탈출 성공',
+                        text: `가상 아카이브에서 탈출했습니다!\n\n소요 시간: ${timeTaken}초\n최고 기록(${bestTime}초) 갱신에는 아쉽게 실패했습니다.`,
+                        showInput: false,
+                        buttons: [{ label: '다시 도전하기', callback: () => window.location.reload() }]
+                    });
+                }
+            };
+
+            submitBtn.addEventListener('click', handleEscapeAttempt);
+            passwordInput.addEventListener('keyup', (event) => {
+                if (event.key === 'Enter') {
+                    handleEscapeAttempt();
+                }
+            });
+            
+            displayBestRecord();
+        });
+    </script>
+</body>
+</html>v
